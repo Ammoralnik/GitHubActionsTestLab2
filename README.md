@@ -1,2 +1,2 @@
 # GitHubActionsTestLab2
-Test task or the 2 lab
+Test task for the 2 lab
