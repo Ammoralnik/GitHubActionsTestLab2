@@ -1,0 +1,57 @@
+name: Install, Deploy, and Test Apache Usability
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Install Apache
+      - name: Install Apache
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y apache2
+          sudo systemctl start apache2
+
+      # Step 2: Get the code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step 3: Copy index.html to Apache
+      - name: Copy index.html to Apache web root
+        run: |
+          sudo cp index.html /var/www/html/index.html
+          sudo chmod 644 /var/www/html/index.html
+
+      # ==========================================
+      # USABILITY & TESTING PHASE
+      # ==========================================
+
+      # Step 4: Check for broken HTML tags or syntax errors
+      - name: Validate HTML Syntax (Htmlhint)
+        run: |
+          npm install -g htmlhint
+          htmlhint index.html
+
+      # Step 5: Test if the web server responds with the actual page content
+      - name: Verify Live Page Usability (Functional Check)
+        run: |
+          # 1. Check if the page returns a successful HTTP 200 status code
+          STATUS_CODE=$(curl -o /dev/null -s -w "%{http_code}" http://localhost/index.html)
+          echo "Server responded with status code: $STATUS_CODE"
+          if [ "$STATUS_CODE" -ne 200 ]; then
+            echo "Error: Website is not accessible!" && exit 1
+          fi
+
+          # 2. Assert that key text elements exist on the live rendered page
+          # This ensures the greeting text actually loads for the user.
+          curl -s http://localhost/index.html | grep -q "Hello, World!" || (echo "Missing primary heading" && exit 1)
+          curl -s http://localhost/index.html | grep -q "Lab 2" || (echo "Missing Lab reference text" && exit 1)
+          
+          echo "Usability checks passed successfully!"
